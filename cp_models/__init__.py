@@ -1,4 +1,4 @@
-from .classification.split_conformal_classifier import SplitConformalClassifier
+from .classification.split_conformal import SplitConformalClassifier
 from .regression.split_conformal_regressor import SplitConformalRegressor
 from .scores import AbsoluteScore, SquaredScore
 from . import models
