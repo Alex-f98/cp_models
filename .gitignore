@@ -43,9 +43,4 @@ env/
 Thumbs.db
 
 # Project specific
-*.pkl
-*.h5
-*.pth
-models/
-checkpoints/
 logs/

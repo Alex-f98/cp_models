@@ -6,13 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "cp_models"
 version = "0.1.0"
 description = "Conformal prediction models"
-authors = [{name = "Brian Fuentes"}]
+authors = [{name = "Brian Fuentes", email = "bfuentes@fi.uba.ar"}]
 dependencies = [
     "numpy>=1.24.0",
     "scikit-learn>=1.3.0",
-    "torch>=2.0.0"
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "matplotlib>=3.5.0"
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["cp_models*"]
+where = ["src"]
+#include = ["cp_models", "cp_models.*"]
