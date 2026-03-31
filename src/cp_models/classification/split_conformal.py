@@ -33,10 +33,10 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
         score: Score function for regression
     """
     
-    def __init__(self, model, task_type='clf', alpha=0.1, score=None):
+    def __init__(self, model, task_type='clf', score=None):
         self.model = model
         self.task_type = task_type
-        self.alpha = alpha
+        self.alpha = None
         self.score = score if score else AbsoluteScore()
         self.q_hat = None
         self.classes_ = None
@@ -51,8 +51,9 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
             
         return self
     
-    def calibrate(self, X_cal, y_cal):
+    def calibrate(self, X_cal, y_cal, alpha=None):
         """Compute conformity scores"""
+        if alpha is None: raise ValueError("alpha must be provided")
         
         if self.task_type == 'reg':
             # Regression: use absolute or squared error
@@ -60,8 +61,9 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
             scores = self.score(y_cal, y_pred)
             
             n = len(scores)
-            q_index = int(np.ceil((n + 1) * (1 - self.alpha))) - 1
+            q_index = int(np.ceil((n + 1) * (1 - alpha))) - 1
             self.q_hat = np.sort(scores)[q_index]
+            self.alpha = alpha
             
         elif self.task_type == 'clf':
             assert hasattr(self.model, 'predict_proba'), "Model must have predict_proba method for classification"
@@ -70,7 +72,7 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
             scores = self.score(y_cal, y_proba[np.arange(len(y_cal)), y_cal])  # scores = 1 - p(y_true | x)
             
             n = len(scores)
-            q_val = np.ceil((1 - self.alpha) * (n + 1)) / n
+            q_val = np.ceil((1 - alpha) * (n + 1)) / n
             q_val = min(q_val, 1.0)  # Limitar a 1.0
             self.q_hat = np.quantile(scores, q_val, method="higher")
         
@@ -133,12 +135,12 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
 class SplitConformalClassifier(SplitConformalPredictor):
     """Backward compatibility wrapper"""
     
-    def __init__(self, model, alpha=0.1, score=ClassificationScore()):
-        super().__init__(model, task_type='clf', alpha=alpha, score=score)
+    def __init__(self, model, score=ClassificationScore()):
+        super().__init__(model, task_type='clf', score=score)
 
 
 class SplitConformalRegressor(SplitConformalPredictor):
     """Backward compatibility wrapper"""
     
-    def __init__(self, model, alpha=0.1, score=SquaredScore()):
-        super().__init__(model, task_type='reg', alpha=alpha, score=score)
+    def __init__(self, model, score=SquaredScore()):
+        super().__init__(model, task_type='reg', score=score)
