@@ -15,6 +15,12 @@ class SquaredScore:
     def __call__(self, y, y_pred):
         return (y - y_pred) ** 2
 
+class ClassificationScore:
+    """ 1 - p(y_true | x) """
+
+    def __call__(self, y, y_pred):
+        return 1 - y_pred
+
 
 class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
     """
@@ -59,15 +65,13 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
             
         elif self.task_type == 'clf':
             assert hasattr(self.model, 'predict_proba'), "Model must have predict_proba method for classification"
-            # Classification: use conformity scores
 
-            # Use probability-based conformity scores
-            y_proba = self.model.predict_proba(X_cal) #[len(y_cal), n_classes]
-            # scores = 1 - p(y_true | x)
-            scores = np.array(1 - y_proba[np.arange(len(y_cal)), y_cal.numpy()]) #[len(y_cal)]
+            y_proba = self.model.predict_proba(X_cal)   # [len(y_cal), n_classes]
+            scores = self.score(y_cal, y_proba[np.arange(len(y_cal)), y_cal])  # scores = 1 - p(y_true | x)
             
             n = len(scores)
-            q_val = np.ceil((1 - self.alpha) * (len(scores) + 1)) / len(scores)
+            q_val = np.ceil((1 - self.alpha) * (n + 1)) / n
+            q_val = min(q_val, 1.0)  # Limitar a 1.0
             self.q_hat = np.quantile(scores, q_val, method="higher")
         
         return self
@@ -129,12 +133,12 @@ class SplitConformalPredictor(BaseEstimator, ClassifierMixin, RegressorMixin):
 class SplitConformalClassifier(SplitConformalPredictor):
     """Backward compatibility wrapper"""
     
-    def __init__(self, model, alpha=0.1, score=None):
+    def __init__(self, model, alpha=0.1, score=ClassificationScore()):
         super().__init__(model, task_type='clf', alpha=alpha, score=score)
 
 
 class SplitConformalRegressor(SplitConformalPredictor):
     """Backward compatibility wrapper"""
     
-    def __init__(self, model, alpha=0.1, score=None):
+    def __init__(self, model, alpha=0.1, score=SquaredScore()):
         super().__init__(model, task_type='reg', alpha=alpha, score=score)
